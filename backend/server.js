@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const path = require("path");
 const {
     Document,
     Packer,
@@ -13,10 +14,14 @@ const {
 
 const app = express();
 
+// Middlewares
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-// Convert A/B/C/D/E to 1/2/3/4/5
+// Serve static frontend
+app.use(express.static(path.join(__dirname, "public")));
+
+// Convert A/B/C/D/E → 1/2/3/4/5
 function convertAnswer(ans) {
     const mapping = {
         A: "1", B: "2", C: "3", D: "4", E: "5",
@@ -27,12 +32,12 @@ function convertAnswer(ans) {
     return mapping[ans] || ans;
 }
 
-// Main Route
+// Generate DOC endpoint
 app.post("/generate-doc", async (req, res) => {
     try {
         const content = req.body.text;
 
-        if (!content) {
+        if (!content || !content.trim()) {
             return res.status(400).json({ error: "No text provided" });
         }
 
@@ -42,7 +47,8 @@ app.post("/generate-doc", async (req, res) => {
 
         const children = [];
 
-        questionBlocks.forEach(block => {
+        questionBlocks.forEach((block, index) => {
+
             const lines = block.split("\n");
 
             let question = "";
@@ -71,12 +77,14 @@ app.post("/generate-doc", async (req, res) => {
 
             question = question.trim();
 
+            if (!question) return;
+
             while (options.length < 5) {
                 options.push("None");
             }
 
             const rowsData = [
-                ["Question", question],
+                ["Question", `Q${index + 1}. ${question}`],
                 ["Type", "Multiple Choice"],
                 ["Option 1", options[0]],
                 ["Option 2", options[1]],
@@ -99,7 +107,7 @@ app.post("/generate-doc", async (req, res) => {
                             },
                             children: [
                                 new Paragraph({
-                                    children: [new TextRun(cell)]
+                                    children: [new TextRun(String(cell))]
                                 })
                             ]
                         })
@@ -131,7 +139,7 @@ app.post("/generate-doc", async (req, res) => {
 
         res.setHeader(
             "Content-Disposition",
-            "attachment; filename=output.docx"
+            "attachment; filename=MCQ_Output.docx"
         );
         res.setHeader(
             "Content-Type",
@@ -141,11 +149,14 @@ app.post("/generate-doc", async (req, res) => {
         res.send(buffer);
 
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Server Error" });
+        console.error("Server Error:", error);
+        res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-app.listen(5000, () => {
-    console.log("✅ Server running on http://localhost:5000");
+// Render-compatible port
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+    console.log(`✅ Server running on port ${PORT}`);
 });
