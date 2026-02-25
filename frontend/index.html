@@ -15,7 +15,7 @@
 async function generateDoc() {
     const text = document.getElementById("inputText").value;
 
-    const response = await fetch("http://localhost:5000/generate-doc", {
+    const response = await fetch("/generate-doc", {
         method: "POST",
         headers: {
             "Content-Type": "application/json"
