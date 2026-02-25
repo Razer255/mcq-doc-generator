@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>MCQ to DOC Generator</title>
+</head>
+<body>
+
+<h2>Paste Questions</h2>
+
+<textarea id="inputText" rows="20" cols="100"></textarea>
+<br><br>
+<button onclick="generateDoc()">Generate DOC</button>
+
+<script>
+async function generateDoc() {
+    const text = document.getElementById("inputText").value;
+
+    const response = await fetch("http://localhost:5000/generate-doc", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ text })
+    });
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "output.docx";
+    a.click();
+}
+</script>
+
+</body>
+</html>
