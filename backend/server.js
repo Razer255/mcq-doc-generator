@@ -84,7 +84,7 @@ app.post("/generate-doc", async (req, res) => {
             }
 
             const rowsData = [
-                ["Question", `Q${index + 1}. ${question}`],
+                ["Question", question],
                 ["Type", "Multiple Choice"],
                 ["Option 1", options[0]],
                 ["Option 2", options[1]],
