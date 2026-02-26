@@ -34,21 +34,7 @@ function convertAnswer(ans) {
     return mapping[ans] || ans;
 }
 
-// Restore numbering if pasted text lost line breaks
-function restoreNumberedFormatting(text) {
-    return text
-        // Add newline before numbered points like 1. 2. 3.
-        .replace(/(?<!^)(\s)(\d+\.\s+)/g, "\n$2")
-        
-        // Add newline before roman (i) (ii) if needed
-        .replace(/(?<!^)(\s)(\([ivxIVX]+\)\s+)/g, "\n$2")
-        
-        // Remove excessive blank lines
-        .replace(/\n{2,}/g, "\n")
-        .trim();
-}
-
-// Clean spacing but preserve structure
+// Clean spacing but preserve line breaks
 function cleanText(text) {
     return text
         .replace(/\r/g, "")
@@ -78,10 +64,9 @@ app.post("/generate-doc", async (req, res) => {
             return res.status(400).json({ error: "No text provided" });
         }
 
-        // Split questions like: 1. 2. 3.
-        const questionBlocks = content
-            .split(/\n?\d+\.\s+/)
-            .filter(q => q.trim());
+        // ✅ CORRECT QUESTION SPLIT (preserves numbering)
+        const questionBlocks =
+            content.match(/\d+\.\s+[\s\S]*?(?=\n\d+\.\s+|$)/g) || [];
 
         const children = [];
 
@@ -119,23 +104,18 @@ app.post("/generate-doc", async (req, res) => {
                     solutionLines.push(sol);
                 }
 
-                // Inside solution continuation
                 else if (insideSolution) {
                     solutionLines.push(line);
                 }
 
-                // Question content
+                // QUESTION text (preserve everything else exactly)
                 else {
-                    questionLines.push(line);
+                    questionLines.push(rawLine);
                 }
             });
 
-            // Restore formatting
-            let question = questionLines.join("\n");
-            question = restoreNumberedFormatting(question);
-            question = cleanText(question);
-
-            let solution = cleanText(solutionLines.join("\n"));
+            const question = cleanText(questionLines.join("\n"));
+            const solution = cleanText(solutionLines.join("\n"));
 
             if (!question) return;
 
