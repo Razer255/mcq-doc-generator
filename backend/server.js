@@ -34,7 +34,24 @@ function convertAnswer(ans) {
     return mapping[ans] || ans;
 }
 
-// Create multi-line DOCX paragraphs
+// Restore numbering if pasted text lost line breaks
+function restoreNumberedFormatting(text) {
+    return text
+        .replace(/(\d+\.)\s+/g, "\n$1 ")
+        .replace(/\n{2,}/g, "\n")
+        .trim();
+}
+
+// Clean spacing but preserve structure
+function cleanText(text) {
+    return text
+        .replace(/\r/g, "")
+        .replace(/[ \t]+/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+}
+
+// Convert multiline string to proper DOCX paragraphs
 function createMultilineParagraph(text) {
     return String(text)
         .split("\n")
@@ -43,15 +60,6 @@ function createMultilineParagraph(text) {
                 children: [new TextRun(line)]
             })
         );
-}
-
-// Clean extra spacing but preserve structure
-function cleanText(text) {
-    return text
-        .replace(/\r/g, "")
-        .replace(/[ \t]+/g, " ")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
 }
 
 /* ------------------ MAIN ROUTE ------------------ */
@@ -64,7 +72,7 @@ app.post("/generate-doc", async (req, res) => {
             return res.status(400).json({ error: "No text provided" });
         }
 
-        // Split by question numbers like: 1. 2. 3.
+        // Split questions like: 1. 2. 3.
         const questionBlocks = content
             .split(/\n?\d+\.\s+/)
             .filter(q => q.trim());
@@ -84,10 +92,9 @@ app.post("/generate-doc", async (req, res) => {
             lines.forEach(rawLine => {
 
                 let line = rawLine.trim();
-
                 if (!line) return;
 
-                // OPTION detection (A. A) (A))
+                // OPTION detection: A. A) (A)
                 if (/^(\(?[A-Ea-e]\)|[A-Ea-e][\.\)])\s*/.test(line)) {
                     const optionText = line.replace(/^(\(?[A-Ea-e]\)|[A-Ea-e][\.\)])\s*/, "");
                     options.push(optionText);
@@ -106,19 +113,23 @@ app.post("/generate-doc", async (req, res) => {
                     solutionLines.push(sol);
                 }
 
-                // After solution line
+                // Inside solution continuation
                 else if (insideSolution) {
                     solutionLines.push(line);
                 }
 
-                // QUESTION text
+                // Question content
                 else {
                     questionLines.push(line);
                 }
             });
 
-            const question = cleanText(questionLines.join("\n"));
-            const solution = cleanText(solutionLines.join("\n"));
+            // Restore formatting
+            let question = questionLines.join(" ");
+            question = restoreNumberedFormatting(question);
+            question = cleanText(question);
+
+            let solution = cleanText(solutionLines.join("\n"));
 
             if (!question) return;
 
