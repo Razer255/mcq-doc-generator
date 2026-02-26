@@ -37,7 +37,13 @@ function convertAnswer(ans) {
 // Restore numbering if pasted text lost line breaks
 function restoreNumberedFormatting(text) {
     return text
-        .replace(/(\d+\.)\s+/g, "\n$1 ")
+        // Add newline before numbered points like 1. 2. 3.
+        .replace(/(?<!^)(\s)(\d+\.\s+)/g, "\n$2")
+        
+        // Add newline before roman (i) (ii) if needed
+        .replace(/(?<!^)(\s)(\([ivxIVX]+\)\s+)/g, "\n$2")
+        
+        // Remove excessive blank lines
         .replace(/\n{2,}/g, "\n")
         .trim();
 }
@@ -125,7 +131,7 @@ app.post("/generate-doc", async (req, res) => {
             });
 
             // Restore formatting
-            let question = questionLines.join(" ");
+            let question = questionLines.join("\n");
             question = restoreNumberedFormatting(question);
             question = cleanText(question);
 
