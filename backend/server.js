@@ -1,7 +1,6 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-
 const {
     Document,
     Packer,
@@ -15,37 +14,25 @@ const {
 
 const app = express();
 
+// Middlewares
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
+
+// Serve static frontend
 app.use(express.static(path.join(__dirname, "public")));
 
+// Convert A/B/C/D/E → 1/2/3/4/5
 function convertAnswer(ans) {
     const mapping = {
         A: "1", B: "2", C: "3", D: "4", E: "5",
         a: "1", b: "2", c: "3", d: "4", e: "5"
     };
+
     ans = ans.replace(/\(\d+\)/g, "").trim();
     return mapping[ans] || ans;
 }
 
-function cleanText(text) {
-    return text
-        .replace(/\r/g, "")
-        .replace(/[ \t]+/g, " ")
-        .replace(/\n{3,}/g, "\n\n")
-        .trim();
-}
-
-function createMultilineParagraph(text) {
-    return String(text)
-        .split("\n")
-        .map(line =>
-            new Paragraph({
-                children: [new TextRun(line)]
-            })
-        );
-}
-
+// Generate DOC endpoint
 app.post("/generate-doc", async (req, res) => {
     try {
         const content = req.body.text;
@@ -54,29 +41,26 @@ app.post("/generate-doc", async (req, res) => {
             return res.status(400).json({ error: "No text provided" });
         }
 
-        // 🔥 Correct split (only at start of line)
-        const questionBlocks =
-            content.match(/^\d+\.\s+[\s\S]*?(?=^\d+\.\s+|$)/gm) || [];
+        const questionBlocks = content
+            .split(/\n?\d+\.\s+/)
+            .filter(q => q.trim());
 
         const children = [];
 
-        questionBlocks.forEach(block => {
+        questionBlocks.forEach((block, index) => {
 
             const lines = block.split("\n");
 
-            let questionLines = [];
+            let question = "";
             let options = [];
             let answer = "";
-            let solutionLines = [];
-            let insideSolution = false;
+            let solution = "";
 
-            lines.forEach(rawLine => {
+            lines.forEach(line => {
+                line = line.trim();
 
-                const line = rawLine.trim();
-                if (!line) return;
-
-                if (/^(\(?[A-Ea-e]\)|[A-Ea-e][\.\)])\s*/.test(line)) {
-                    const optionText = line.replace(/^(\(?[A-Ea-e]\)|[A-Ea-e][\.\)])\s*/, "");
+                if (/^[A-Ea-e][\.\)]\s*/.test(line)) {
+                    const optionText = line.replace(/^[A-Ea-e][\.\)]\s*/, "");
                     options.push(optionText);
                 }
                 else if (/^answer/i.test(line)) {
@@ -84,20 +68,14 @@ app.post("/generate-doc", async (req, res) => {
                     answer = convertAnswer(ans);
                 }
                 else if (/^solution/i.test(line)) {
-                    insideSolution = true;
-                    const sol = line.replace(/solution\s*[:\-]?\s*/i, "");
-                    solutionLines.push(sol);
-                }
-                else if (insideSolution) {
-                    solutionLines.push(rawLine);
+                    solution = line.replace(/solution\s*[:\-]?\s*/i, "");
                 }
                 else {
-                    questionLines.push(rawLine);
+                    question += line + " ";
                 }
             });
 
-            const question = cleanText(questionLines.join("\n"));
-            const solution = cleanText(solutionLines.join("\n"));
+            question = question.trim();
 
             if (!question) return;
 
@@ -123,8 +101,15 @@ app.post("/generate-doc", async (req, res) => {
                 new TableRow({
                     children: row.map(cell =>
                         new TableCell({
-                            width: { size: 50, type: WidthType.PERCENTAGE },
-                            children: createMultilineParagraph(cell)
+                            width: {
+                                size: 50,
+                                type: WidthType.PERCENTAGE
+                            },
+                            children: [
+                                new Paragraph({
+                                    children: [new TextRun(String(cell))]
+                                })
+                            ]
                         })
                     )
                 })
@@ -132,7 +117,10 @@ app.post("/generate-doc", async (req, res) => {
 
             const table = new Table({
                 rows: tableRows,
-                width: { size: 100, type: WidthType.PERCENTAGE }
+                width: {
+                    size: 100,
+                    type: WidthType.PERCENTAGE
+                }
             });
 
             children.push(table);
@@ -140,7 +128,11 @@ app.post("/generate-doc", async (req, res) => {
         });
 
         const doc = new Document({
-            sections: [{ children }]
+            sections: [
+                {
+                    children: children
+                }
+            ]
         });
 
         const buffer = await Packer.toBuffer(doc);
@@ -149,7 +141,6 @@ app.post("/generate-doc", async (req, res) => {
             "Content-Disposition",
             "attachment; filename=MCQ_Output.docx"
         );
-
         res.setHeader(
             "Content-Type",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -163,7 +154,9 @@ app.post("/generate-doc", async (req, res) => {
     }
 });
 
+// Render-compatible port
 const PORT = process.env.PORT || 5000;
+
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`✅ Server running on port ${PORT}`);
 });
