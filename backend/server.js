@@ -15,26 +15,19 @@ const {
 
 const app = express();
 
-/* ------------------ MIDDLEWARE ------------------ */
-
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-/* ------------------ UTILITIES ------------------ */
-
-// Convert A/B/C/D/E → 1/2/3/4/5
 function convertAnswer(ans) {
     const mapping = {
         A: "1", B: "2", C: "3", D: "4", E: "5",
         a: "1", b: "2", c: "3", d: "4", e: "5"
     };
-
     ans = ans.replace(/\(\d+\)/g, "").trim();
     return mapping[ans] || ans;
 }
 
-// Clean spacing but preserve line breaks
 function cleanText(text) {
     return text
         .replace(/\r/g, "")
@@ -43,7 +36,6 @@ function cleanText(text) {
         .trim();
 }
 
-// Convert multiline string to proper DOCX paragraphs
 function createMultilineParagraph(text) {
     return String(text)
         .split("\n")
@@ -54,8 +46,6 @@ function createMultilineParagraph(text) {
         );
 }
 
-/* ------------------ MAIN ROUTE ------------------ */
-
 app.post("/generate-doc", async (req, res) => {
     try {
         const content = req.body.text;
@@ -64,9 +54,9 @@ app.post("/generate-doc", async (req, res) => {
             return res.status(400).json({ error: "No text provided" });
         }
 
-        // ✅ CORRECT QUESTION SPLIT (preserves numbering)
+        // 🔥 Correct split (only at start of line)
         const questionBlocks =
-            content.match(/\d+\.\s+[\s\S]*?(?=\n\d+\.\s+|$)/g) || [];
+            content.match(/^\d+\.\s+[\s\S]*?(?=^\d+\.\s+|$)/gm) || [];
 
         const children = [];
 
@@ -82,33 +72,25 @@ app.post("/generate-doc", async (req, res) => {
 
             lines.forEach(rawLine => {
 
-                let line = rawLine.trim();
+                const line = rawLine.trim();
                 if (!line) return;
 
-                // OPTION detection: A. A) (A)
                 if (/^(\(?[A-Ea-e]\)|[A-Ea-e][\.\)])\s*/.test(line)) {
                     const optionText = line.replace(/^(\(?[A-Ea-e]\)|[A-Ea-e][\.\)])\s*/, "");
                     options.push(optionText);
                 }
-
-                // ANSWER detection
                 else if (/^answer/i.test(line)) {
                     const ans = line.replace(/answer\s*[:\-]?\s*/i, "");
                     answer = convertAnswer(ans);
                 }
-
-                // SOLUTION detection
                 else if (/^solution/i.test(line)) {
                     insideSolution = true;
                     const sol = line.replace(/solution\s*[:\-]?\s*/i, "");
                     solutionLines.push(sol);
                 }
-
                 else if (insideSolution) {
-                    solutionLines.push(line);
+                    solutionLines.push(rawLine);
                 }
-
-                // QUESTION text (preserve everything else exactly)
                 else {
                     questionLines.push(rawLine);
                 }
@@ -119,7 +101,6 @@ app.post("/generate-doc", async (req, res) => {
 
             if (!question) return;
 
-            // Support up to 5 options
             while (options.length < 5) {
                 options.push("None");
             }
@@ -142,10 +123,7 @@ app.post("/generate-doc", async (req, res) => {
                 new TableRow({
                     children: row.map(cell =>
                         new TableCell({
-                            width: {
-                                size: 50,
-                                type: WidthType.PERCENTAGE
-                            },
+                            width: { size: 50, type: WidthType.PERCENTAGE },
                             children: createMultilineParagraph(cell)
                         })
                     )
@@ -154,10 +132,7 @@ app.post("/generate-doc", async (req, res) => {
 
             const table = new Table({
                 rows: tableRows,
-                width: {
-                    size: 100,
-                    type: WidthType.PERCENTAGE
-                }
+                width: { size: 100, type: WidthType.PERCENTAGE }
             });
 
             children.push(table);
@@ -188,10 +163,7 @@ app.post("/generate-doc", async (req, res) => {
     }
 });
 
-/* ------------------ SERVER ------------------ */
-
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
-    console.log(`✅ Server running on port ${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
