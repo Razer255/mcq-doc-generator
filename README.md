@@ -60,8 +60,8 @@ MCQ-to-DOCX/
 Clone the repository:
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git
-cd YOUR_REPO
+git clone https://github.com/Razer255/mcq-doc-generator
+cd mcq-doc-generator
 
 Install dependencies:
 
