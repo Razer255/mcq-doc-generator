@@ -57,6 +57,74 @@
         gap: 10px;
     }
 
+    .promo-box {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 300px;
+        background: rgba(255,255,255,0.95);
+        backdrop-filter: blur(8px);
+        border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        font-size: 13px;
+        animation: slideIn 0.5s ease;
+        z-index: 999;
+    }
+
+    .promo-header {
+        background: #2a5298;
+        color: white;
+        padding: 10px;
+        border-radius: 12px 12px 0 0;
+        font-weight: bold;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .promo-content {
+        padding: 12px;
+    }
+
+    .promo-buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .promo-btn {
+        flex: 1;
+        text-align: center;
+        padding: 8px;
+        border-radius: 6px;
+        text-decoration: none;
+        color: white;
+        font-size: 12px;
+        transition: 0.3s;
+    }
+
+    .promo-btn.star {
+        background: #24292e;
+    }
+
+    .promo-btn.follow {
+        background: #0366d6;
+    }
+
+    .promo-btn:hover {
+        opacity: 0.85;
+    }
+
+    .close-btn {
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    @keyframes slideIn {
+        from { transform: translateY(20px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+
     .file-input {
         padding: 8px;
         border-radius: 6px;
@@ -242,7 +310,36 @@ function generateDoc() {
 
     xhr.send(formData);
 }
-</script>
+function closePromo() {
+    document.getElementById("promoBox").style.display = "none";
+}
 
+</script>
+<div class="promo-box" id="promoBox">
+    <div class="promo-header">
+        🚀 Thank You for Using MCQ to DOCX
+        <span class="close-btn" onclick="closePromo()">×</span>
+    </div>
+    <div class="promo-content">
+        <p>
+            This tool is proudly used by our interns and team members.
+            If it helped you, consider supporting the project.
+        </p>
+
+        <div class="promo-buttons">
+            <a href="https://github.com/Razer255/mcq-doc-generator"
+               target="_blank"
+               class="promo-btn star">
+               ⭐ Star Repo
+            </a>
+
+            <a href="https://github.com/Razer255"
+               target="_blank"
+               class="promo-btn follow">
+               👤 Follow Me
+            </a>
+        </div>
+    </div>
+</div>
 </body>
 </html>
