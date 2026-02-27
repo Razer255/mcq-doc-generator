@@ -97,27 +97,31 @@ app.post("/generate-doc", upload.none(), async (req, res) => {
 
             question = question.trim();
             solution = solution.trim();
+            
+            if (options.length !== 4) {
+                console.log(`❌ Question skipped (Invalid options count): ${question}`);
+                return; // Skip malformed question
+            }
 
             if (!question) return;
 
-            // Ensure exactly 5 options
-            while (options.length < 5) {
-                options.push("None");
-            }
 
             const rowsData = [
                 ["Question", question],
-                ["Type", "Multiple Choice"],
-                ["Option 1", options[0]],
-                ["Option 2", options[1]],
-                ["Option 3", options[2]],
-                ["Option 4", options[3]],
-                ["Option 5", options[4]],
+                ["Type", "Multiple Choice"]
+            ];
+
+            // Add only detected options
+            options.forEach((opt, i) => {
+                rowsData.push([`Option ${i + 1}`, opt]);
+            });
+
+            rowsData.push(
                 ["Answer", answer],
                 ["Solution", solution],
                 ["Positive Marks", "1"],
                 ["Negative Marks", "0"]
-            ];
+            );
 
             const tableRows = rowsData.map(row =>
                 new TableRow({
