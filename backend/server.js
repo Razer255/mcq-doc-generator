@@ -1,6 +1,8 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const multer = require("multer");
+
 const {
     Document,
     Packer,
@@ -13,10 +15,12 @@ const {
 } = require("docx");
 
 const app = express();
+const upload = multer(); // For handling FormData
 
 // Middlewares
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 
 // Serve static frontend
 app.use(express.static(path.join(__dirname, "public")));
@@ -32,8 +36,8 @@ function convertAnswer(ans) {
     return mapping[ans] || ans;
 }
 
-// Generate DOC endpoint
-app.post("/generate-doc", async (req, res) => {
+// Generate DOC endpoint (supports FormData)
+app.post("/generate-doc", upload.none(), async (req, res) => {
     try {
         const content = req.body.text;
 
@@ -47,7 +51,7 @@ app.post("/generate-doc", async (req, res) => {
 
         const children = [];
 
-        questionBlocks.forEach((block, index) => {
+        questionBlocks.forEach((block) => {
 
             const lines = block.split("\n");
 
@@ -59,10 +63,9 @@ app.post("/generate-doc", async (req, res) => {
 
             lines.forEach(line => {
                 line = line.trim();
-
                 if (!line) return;
 
-                // OPTION
+                // OPTION (A. or A))
                 if (/^[A-Ea-e][\.\)]\s*/.test(line)) {
                     const optionText = line.replace(/^[A-Ea-e][\.\)]\s*/, "");
                     options.push(optionText);
@@ -76,7 +79,7 @@ app.post("/generate-doc", async (req, res) => {
                     return;
                 }
 
-                // START SOLUTION
+                // SOLUTION START
                 if (/^solution/i.test(line)) {
                     isSolution = true;
                     const firstLine = line.replace(/solution\s*[:\-]?\s*/i, "");
@@ -84,19 +87,20 @@ app.post("/generate-doc", async (req, res) => {
                     return;
                 }
 
-                // IF IN SOLUTION MODE
+                // CONTINUE SOLUTION
                 if (isSolution) {
                     solution += line + " ";
-                }
-                else {
+                } else {
                     question += line + " ";
                 }
             });
 
             question = question.trim();
+            solution = solution.trim();
 
             if (!question) return;
 
+            // Ensure exactly 5 options
             while (options.length < 5) {
                 options.push("None");
             }
@@ -142,8 +146,12 @@ app.post("/generate-doc", async (req, res) => {
             });
 
             children.push(table);
-            children.push(new Paragraph(""));
+            children.push(new Paragraph("")); // spacing
         });
+
+        if (children.length === 0) {
+            return res.status(400).json({ error: "No valid MCQs detected." });
+        }
 
         const doc = new Document({
             sections: [
