@@ -60,7 +60,6 @@ It is actively being used by interns and team members inside our organization.
 
 Clone the repository:
 
-```bash
 git clone https://github.com/Razer255/mcq-doc-generator
 cd mcq-doc-generator
 
