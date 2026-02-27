@@ -43,14 +43,15 @@ It is actively being used by interns and team members inside our organization.
 ## 📂 Project Structure
 
 
-MCQ-to-DOCX/
-│
-├── public/
-│ └── index.html
-│
-├── server.js
-├── package.json
-└── README.md
+```bash
+  MCQ-to-DOCX/
+  │
+  ├── public/
+  │ └── index.html
+  │
+  ├── server.js
+  ├── package.json
+  └── README.md
 
 
 ---
