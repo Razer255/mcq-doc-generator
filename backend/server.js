@@ -55,20 +55,38 @@ app.post("/generate-doc", async (req, res) => {
             let options = [];
             let answer = "";
             let solution = "";
+            let isSolution = false;
 
             lines.forEach(line => {
                 line = line.trim();
 
+                if (!line) return;
+
+                // OPTION
                 if (/^[A-Ea-e][\.\)]\s*/.test(line)) {
                     const optionText = line.replace(/^[A-Ea-e][\.\)]\s*/, "");
                     options.push(optionText);
+                    return;
                 }
-                else if (/^answer/i.test(line)) {
+
+                // ANSWER
+                if (/^answer/i.test(line)) {
                     const ans = line.replace(/answer\s*[:\-]?\s*/i, "");
                     answer = convertAnswer(ans);
+                    return;
                 }
-                else if (/^solution/i.test(line)) {
-                    solution = line.replace(/solution\s*[:\-]?\s*/i, "");
+
+                // START SOLUTION
+                if (/^solution/i.test(line)) {
+                    isSolution = true;
+                    const firstLine = line.replace(/solution\s*[:\-]?\s*/i, "");
+                    if (firstLine) solution += firstLine + " ";
+                    return;
+                }
+
+                // IF IN SOLUTION MODE
+                if (isSolution) {
+                    solution += line + " ";
                 }
                 else {
                     question += line + " ";
