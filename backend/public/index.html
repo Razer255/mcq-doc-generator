@@ -140,6 +140,9 @@
     <h2>MCQ to DOCX Generator</h2>
 
     <textarea id="inputText" placeholder="Paste your MCQs here..."></textarea>
+    <div id="questionStats" style="margin-top:10px; font-size:13px; color:#2a5298;">
+        Total Questions Detected: 0
+    </div>
 
     <div class="progress-container" id="progressContainer">
         <div class="progress-bar-bg">
@@ -165,7 +168,16 @@ const textarea = document.getElementById("inputText");
 const charCount = document.getElementById("charCount");
 
 textarea.addEventListener("input", () => {
-    charCount.textContent = textarea.value.length + " characters";
+    const text = textarea.value;
+
+    charCount.textContent = text.length + " characters";
+
+    // Detect question numbers like: 1. 2. 3.
+    const matches = text.match(/\n?\d+\.\s+/g);
+    const count = matches ? matches.length : 0;
+
+    document.getElementById("questionStats").textContent =
+        "Total Questions Detected: " + count;
 });
 
 function generateDoc() {
