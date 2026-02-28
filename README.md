@@ -27,7 +27,6 @@ It is actively being used by interns and team members inside our organization.
 - ✅ Clean DOCX structured output  
 - ✅ Malformed MCQ detection  
 - ✅ Live question counter  
-- ✅ Modern UI  
 
 ---
 
